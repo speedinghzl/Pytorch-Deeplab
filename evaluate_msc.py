@@ -123,16 +123,26 @@ def main():
     for index, batch in enumerate(testloader):
         if index % 100 == 0:
             print('%d processd'%(index))
-        image, label, size, name = batch
-        size = size[0].numpy()
-        output = model(Variable(image, volatile=True).cuda(gpu0))
-        output = interp(output).cpu().data[0].numpy()
+        images, label, size, name = batch
+        images = Variable(images, volatile=True)
+        h, w, c = size[0].numpy()
+        images075 = nn.Upsample(size=(int(h*0.75), int(w*0.75)), mode='bilinear')(images)
+        images05 = nn.Upsample(size=(int(h*0.5), int(w*0.5)), mode='bilinear')(images)
 
-        output = output[:,:size[0],:size[1]]
-        gt = np.asarray(label[0].numpy()[:size[0],:size[1]], dtype=np.int)
-        
+        out100 = model(images.cuda(args.gpu))
+        out075 = model(images075.cuda(args.gpu))
+        out05 = model(images05.cuda(args.gpu))
+        o_h, o_w = out100.size()[2:]
+        interpo1 = nn.Upsample(size=(o_h, o_w), mode='bilinear')
+        out_max = torch.max(torch.stack([out100, interpo1(out075), interpo1(out05)]), dim=0)[0]
+
+        output = interp(out_max).cpu().data[0].numpy()
+
+        output = output[:,:h,:w]
         output = output.transpose(1,2,0)
         output = np.asarray(np.argmax(output, axis=2), dtype=np.int)
+
+        gt = np.asarray(label[0].numpy()[:h,:w], dtype=np.int)
 
         # show_all(gt, output)
         data_list.append([gt.flatten(), output.flatten()])

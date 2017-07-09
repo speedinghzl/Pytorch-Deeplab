@@ -13,19 +13,21 @@ import torch.backends.cudnn as cudnn
 import sys
 import os
 import os.path as osp
+import scipy.ndimage as nd
 from deeplab.model import Res_Deeplab
 from deeplab.loss import CrossEntropy2d
 from deeplab.datasets import VOCDataSet
 import matplotlib.pyplot as plt
 import random
 import timeit
-start = timeit.timeit
+start = timeit.timeit()
 
 IMG_MEAN = np.array((104.00698793,116.66876762,122.67891434), dtype=np.float32)
 
-BATCH_SIZE = 10
+BATCH_SIZE = 1
 DATA_DIRECTORY = '../data/VOCdevkit/voc12'
 DATA_LIST_PATH = './dataset/list/train_aug.txt'
+ITER_SIZE = 10
 IGNORE_LABEL = 255
 INPUT_SIZE = '321,321'
 LEARNING_RATE = 2.5e-4
@@ -37,7 +39,7 @@ RANDOM_SEED = 1234
 RESTORE_FROM = './dataset/MS_DeepLab_resnet_pretrained_COCO_init.pth'
 SAVE_NUM_IMAGES = 2
 SAVE_PRED_EVERY = 1000
-SNAPSHOT_DIR = './snapshots/'
+SNAPSHOT_DIR = './snapshots_msc/'
 WEIGHT_DECAY = 0.0005
 
 def get_arguments():
@@ -57,6 +59,8 @@ def get_arguments():
                         help="The index of the label to ignore during the training.")
     parser.add_argument("--input-size", type=str, default=INPUT_SIZE,
                         help="Comma-separated string with height and width of images.")
+    parser.add_argument("--iter-size", type=int, default=ITER_SIZE,
+                        help="Number of steps after which gradient update is applied.")
     parser.add_argument("--is-training", action="store_true",
                         help="Whether to updates the running means and variances during the training.")
     parser.add_argument("--learning-rate", type=float, default=LEARNING_RATE,
@@ -99,7 +103,8 @@ def loss_calc(pred, label, gpu):
     """
     # out shape batch_size x channels x h x w -> batch_size x channels x h x w
     # label shape h x w x 1 x batch_size  -> batch_size x 1 x h x w
-    label = Variable(label.long()).cuda(gpu)
+    label = torch.from_numpy(label).long()
+    label = Variable(label).cuda(gpu)
     m = nn.LogSoftmax()
     criterion = CrossEntropy2d().cuda(gpu)
     pred = m(pred)
@@ -194,42 +199,61 @@ def main():
         os.makedirs(args.snapshot_dir)
 
 
-    trainloader = data.DataLoader(VOCDataSet(args.data_dir, args.data_list, max_iters=args.num_steps, crop_size=input_size, 
-                    scale=args.random_scale, mirror=args.random_mirror, mean=IMG_MEAN), 
-                    batch_size=args.batch_size, shuffle=True, num_workers=5, pin_memory=True)
+    trainloader = data.DataLoader(VOCDataSet(args.data_dir, args.data_list, max_iters=args.num_steps*args.iter_size,
+                    crop_size=input_size, scale=args.random_scale, mirror=args.random_mirror, mean=IMG_MEAN), 
+                    batch_size=args.batch_size, shuffle=True, num_workers=1, pin_memory=True)
 
     optimizer = optim.SGD([{'params': get_1x_lr_params_NOscale(model), 'lr': args.learning_rate }, 
                 {'params': get_10x_lr_params(model), 'lr': 10*args.learning_rate}], 
                 lr=args.learning_rate, momentum=args.momentum,weight_decay=args.weight_decay)
     optimizer.zero_grad()
 
-    interp = nn.Upsample(size=input_size, mode='bilinear')
-
-
+    b_loss = 0
     for i_iter, batch in enumerate(trainloader):
+
         images, labels, _, _ = batch
-        images = Variable(images).cuda(args.gpu)
+        images, labels = Variable(images), labels.numpy()
+        h, w = images.size()[2:]
+        images075 = nn.Upsample(size=(int(h*0.75), int(w*0.75)), mode='bilinear')(images)
+        images05 = nn.Upsample(size=(int(h*0.5), int(w*0.5)), mode='bilinear')(images)
 
-        optimizer.zero_grad()
-        adjust_learning_rate(optimizer, i_iter)
-        pred = interp(model(images))
-        loss = loss_calc(pred, labels, args.gpu)
-        loss.backward()
-        optimizer.step()
+        out = model(images.cuda(args.gpu))
+        out075 = model(images075.cuda(args.gpu))
+        out05 = model(images05.cuda(args.gpu))
+        o_h, o_w = out.size()[2:]
+        interpo1 = nn.Upsample(size=(o_h, o_w), mode='bilinear')
+        interpo2 = nn.Upsample(size=(h, w), mode='bilinear')
+        out_max = interpo2(torch.max(torch.stack([out, interpo1(out075), interpo1(out05)]), dim=0)[0])
 
-        
-        print 'iter = ', i_iter, 'of', args.num_steps,'completed, loss = ', loss.data.cpu().numpy()
+        loss = loss_calc(out_max, labels, args.gpu)
+        d1, d2 = float(labels.shape[1]), float(labels.shape[2])
+        loss100 = loss_calc(out, nd.zoom(labels, (1.0, out.size()[2]/d1, out.size()[3]/d2), order=0), args.gpu)
+        loss075 = loss_calc(out075, nd.zoom(labels, (1.0, out075.size()[2]/d1, out075.size()[3]/d2), order=0), args.gpu)
+        loss05 = loss_calc(out05, nd.zoom(labels, (1.0, out05.size()[2]/d1, out05.size()[3]/d2), order=0), args.gpu)
+        loss_all = (loss + loss100 + loss075 + loss05) / args.iter_size
+        loss_all.backward()
+        b_loss += loss_all.data.cpu().numpy()
 
-        if i_iter >= args.num_steps-1:
+        b_iter = i_iter / args.iter_size
+
+        if b_iter >= args.num_steps-1:
             print 'save model ...'
+            optimizer.step()
             torch.save(model.state_dict(),osp.join(args.snapshot_dir, 'VOC12_scenes_'+str(args.num_steps)+'.pth'))
             break
 
-        if i_iter % args.save_pred_every == 0 and i_iter!=0:
-            print 'taking snapshot ...'
-            torch.save(model.state_dict(),osp.join(args.snapshot_dir, 'VOC12_scenes_'+str(i_iter)+'.pth'))     
+        if i_iter % args.iter_size == 0 and i_iter != 0:
+            print 'iter = ', b_iter, 'of', args.num_steps,'completed, loss = ', b_loss
+            optimizer.step()
+            adjust_learning_rate(optimizer, b_iter)
+            optimizer.zero_grad()
+            b_loss = 0
 
-    end = timeit.timeit
+        if b_iter % args.save_pred_every == 0 and b_iter!=0:
+            print 'taking snapshot ...'
+            torch.save(model.state_dict(),osp.join(args.snapshot_dir, 'VOC12_scenes_'+str(b_iter)+'.pth'))
+
+    end = timeit.timeit()
     print end-start,'seconds'
 
 if __name__ == '__main__':

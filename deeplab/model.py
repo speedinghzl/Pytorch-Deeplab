@@ -182,25 +182,28 @@ class MS_Deeplab(nn.Module):
         self.Scale = ResNet(block,[3, 4, 23, 3],num_classes)   #changed to fix #4 
 
     def forward(self,x):
+        output = self.Scale(x) # for original scale
+        output_size = output.size()[2]
         input_size = x.size()[2]
-        self.interp1 = nn.UpsamplingBilinear2d(size = (  int(input_size*0.75)+1,  int(input_size*0.75)+1  ))
-        self.interp2 = nn.UpsamplingBilinear2d(size = (  int(input_size*0.5)+1,   int(input_size*0.5)+1   ))
-        self.interp3 = nn.UpsamplingBilinear2d(size = (  outS(input_size),   outS(input_size)   ))
-        out = []
-        x2 = self.interp1(x)
-        x3 = self.interp2(x)
-        out.append(self.Scale(x))	# for original scale
-        out.append(self.interp3(self.Scale(x2)))	# for 0.75x scale
-        out.append(self.Scale(x3))	# for 0.5x scale
 
+        self.interp1 = nn.Upsample(size=(int(input_size*0.75)+1, int(input_size*0.75)+1), mode='bilinear')
+        self.interp2 = nn.Upsample(size=(int(input_size*0.5)+1, int(input_size*0.5)+1), mode='bilinear')
+        self.interp3 = nn.Upsample(size=(output_size, output_size), mode='bilinear')
 
-        x2Out_interp = out[1]
-        x3Out_interp = self.interp3(out[2])
-        temp1 = torch.max(out[0],x2Out_interp)
-        out.append(torch.max(temp1,x3Out_interp))
-        return out
+        x75 = self.interp1(x)
+        output75 = self.interp3(self.Scale(x75)) # for 0.75x scale
+
+        x5 = self.interp2(x)
+        output5 = self.interp3(self.Scale(x5))	# for 0.5x scale
+
+        out_max = torch.max(torch.max(output, output75), output5)
+        return [output, output75, output5, out_max]
+
+def Res_Ms_Deeplab(num_classes=21):
+    model = MS_Deeplab(Bottleneck, num_classes)
+    return model
 
 def Res_Deeplab(num_classes=21):
-    model = ResNet(Bottleneck,[3, 4, 23, 3],num_classes)
+    model = ResNet(Bottleneck,[3, 4, 23, 3], num_classes)
     return model
 

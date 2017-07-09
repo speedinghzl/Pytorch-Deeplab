@@ -1,0 +1,8 @@
+# models
+dataset/MS_DeepLab_resnet_pretrained_COCO_init.pth
+
+# pyc
+*.pyc
+deeplab/*.pyc
+
+snapshots/
