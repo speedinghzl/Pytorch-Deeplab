@@ -19,12 +19,12 @@ from deeplab.datasets import VOCDataSet
 import matplotlib.pyplot as plt
 import random
 import timeit
-start = timeit.timeit
+start = timeit.default_timer()
 
 IMG_MEAN = np.array((104.00698793,116.66876762,122.67891434), dtype=np.float32)
 
 BATCH_SIZE = 10
-DATA_DIRECTORY = '../data/VOCdevkit/voc12'
+DATA_DIRECTORY = '../../data/VOCdevkit/voc12'
 DATA_LIST_PATH = './dataset/list/train_aug.txt'
 IGNORE_LABEL = 255
 INPUT_SIZE = '321,321'
@@ -194,7 +194,7 @@ def main():
         os.makedirs(args.snapshot_dir)
 
 
-    trainloader = data.DataLoader(VOCDataSet(args.data_dir, args.data_list, max_iters=args.num_steps, crop_size=input_size, 
+    trainloader = data.DataLoader(VOCDataSet(args.data_dir, args.data_list, max_iters=args.num_steps*args.batch_size, crop_size=input_size, 
                     scale=args.random_scale, mirror=args.random_mirror, mean=IMG_MEAN), 
                     batch_size=args.batch_size, shuffle=True, num_workers=5, pin_memory=True)
 
@@ -229,7 +229,7 @@ def main():
             print 'taking snapshot ...'
             torch.save(model.state_dict(),osp.join(args.snapshot_dir, 'VOC12_scenes_'+str(i_iter)+'.pth'))     
 
-    end = timeit.timeit
+    end = timeit.default_timer()
     print end-start,'seconds'
 
 if __name__ == '__main__':
