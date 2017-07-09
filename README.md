@@ -33,14 +33,14 @@ For more details on the underlying model please refer to the following paper:
 
 To train the network, one can use the augmented PASCAL VOC 2012 dataset with <code>10582</code> images for training and <code>1449</code> images for validation.
 
-The training script allows to monitor the progress in the optimisation process using TensorBoard's image summary. Besides that, one can also exploit random scaling and mirroring of the inputs during training as a means for data augmentation. For example, to train the model from scratch with random scale and mirroring turned on, simply run:
+You can download converted `init.caffemodel` with extension name .pth [here](https://drive.google.com/open?id=0BxhUwxvLPO7TVFJQU1dwbXhHdEk). Besides that, one can also exploit random scaling and mirroring of the inputs during training as a means for data augmentation. For example, to train the model from scratch with random scale and mirroring turned on, simply run:
 ```bash
 python train.py --random-mirror --random-scale --gpu 0
 ```
 
 ## Evaluation
 
-The single-scale model shows <code>84.0%</code> mIoU on the Pascal VOC 2012 validation dataset (['SegmentationClassAug'](https://www.dropbox.com/s/oeu149j8qtbs1x0/SegmentationClassAug.zip?dl=0)). No post-processing step with CRF is applied.
+The single-scale model shows <code>74.0%</code> mIoU on the Pascal VOC 2012 validation dataset (['SegmentationClassAug'](https://www.dropbox.com/s/oeu149j8qtbs1x0/SegmentationClassAug.zip?dl=0)). No post-processing step with CRF is applied.
 
 The following command provides the description of each of the evaluation settings:
 ```bash
