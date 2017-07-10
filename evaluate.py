@@ -19,7 +19,7 @@ import matplotlib.pyplot as plt
 import torch.nn as nn
 IMG_MEAN = np.array((104.00698793,116.66876762,122.67891434), dtype=np.float32)
 
-DATA_DIRECTORY = '../data/VOCdevkit/voc12'
+DATA_DIRECTORY = '../../data/VOCdevkit/voc12'
 DATA_LIST_PATH = './dataset/list/val.txt'
 IGNORE_LABEL = 255
 NUM_CLASSES = 21

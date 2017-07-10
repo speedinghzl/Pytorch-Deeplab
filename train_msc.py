@@ -249,7 +249,7 @@ def main():
             optimizer.zero_grad()
             b_loss = 0
 
-        if b_iter % args.save_pred_every == 0 and b_iter!=0:
+        if i_iter % (args.save_pred_every*args.iter_size) == 0 and b_iter!=0:
             print 'taking snapshot ...'
             torch.save(model.state_dict(),osp.join(args.snapshot_dir, 'VOC12_scenes_'+str(b_iter)+'.pth'))
 
