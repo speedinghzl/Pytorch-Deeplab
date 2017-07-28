@@ -167,7 +167,7 @@ def main():
     h, w = map(int, args.input_size.split(','))
     input_size = (h, w)
 
-    cudnn.enabled = False
+    cudnn.enabled = True
     gpu = args.gpu
 
     # Create network.
