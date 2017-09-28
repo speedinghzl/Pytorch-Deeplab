@@ -8,7 +8,7 @@ This is an (re-)implementation of [DeepLab-ResNet](http://liangchiehchen.com/pro
 **9 July, 2017**:
 * The training script `train.py` has been re-written following the original optimisation setup: SGD with momentum, weight decay, learning rate with polynomial decay, different learning rates for different layers, ignoring the 'void' label (<code>255</code>).
 * The training script with multi-scale inputs `train_msc.py` has been added: the input is resized to <code>0.5</code> and <code>0.75</code> of the original resolution, and <code>4</code> losses are aggregated: loss on the original resolution, on the <code>0.75</code> resolution, on the <code>0.5</code> resolution, and loss on the all fused outputs.
-* Evaluation of a single-scale model on the PASCAL VOC validation dataset (using ['SegmentationClassAug'](https://www.dropbox.com/s/oeu149j8qtbs1x0/SegmentationClassAug.zip?dl=0)) leads to <code>74.0%</code> mIoU without CRF as post-processing step. The evaluation of multi-scale model is in progress.
+* Evaluation of a single-scale model on the PASCAL VOC validation dataset (using ['SegmentationClassAug'](https://www.dropbox.com/s/oeu149j8qtbs1x0/SegmentationClassAug.zip?dl=0)) leads to <code>74.0%</code> mIoU ['VOC12_scenes_20000.pth'](https://pan.baidu.com/s/1bP52R8) without CRF as post-processing step. The evaluation of multi-scale model is in progress.
 
 
 ## Model Description
