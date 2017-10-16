@@ -144,7 +144,7 @@ class Residual_Refinement_Module(nn.Module):
     def forward(self, x):
         x, seg1 = self.RC1(x)
         _, seg2 = self.RC2(x)
-        return [seg1+seg2]
+        return [seg1, seg1+seg2]
 
 class ResNet_Refine(nn.Module):
     def __init__(self, block, layers, num_classes):
