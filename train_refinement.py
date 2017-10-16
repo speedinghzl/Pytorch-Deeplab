@@ -36,8 +36,8 @@ POWER = 0.9
 RANDOM_SEED = 1234
 RESTORE_FROM = './dataset/MS_DeepLab_resnet_pretrained_COCO_init.pth'
 SAVE_NUM_IMAGES = 2
-SAVE_PRED_EVERY = 1000
-SNAPSHOT_DIR = './snapshots/'
+SAVE_PRED_EVERY = 10000
+SNAPSHOT_DIR = './snapshots_refinment/'
 WEIGHT_DECAY = 0.0005
 
 def get_arguments():
@@ -164,7 +164,7 @@ def main():
     gpu = args.gpu
 
     # Create network.
-    model = Res_Deeplab(num_classes=args.num_classes)
+    model = Res_Deeplab(num_classes=args.num_classes, is_refine=True)
     # For a small batch size, it is better to keep 
     # the statistics of the BN layers (running means and variances)
     # frozen, and to not update the values provided by the pre-trained model. 
@@ -210,8 +210,10 @@ def main():
 
         optimizer.zero_grad()
         adjust_learning_rate(optimizer, i_iter)
-        pred = interp(model(images))
-        loss = loss_calc(pred, labels, args.gpu)
+        preds = model(images)
+        loss = 0
+        for pred in preds:
+            loss += loss_calc(interp(pred), labels, args.gpu)
         loss.backward()
         optimizer.step()
 

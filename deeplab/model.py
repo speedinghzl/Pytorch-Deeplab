@@ -115,7 +115,93 @@ class Classifier_Module(nn.Module):
             out += self.conv2d_list[i+1](x)
             return out
 
+class Residual_Covolution(nn.Module):
+    def __init__(self, icol, ocol, num_classes):
+        super(Residual_Covolution, self).__init__()
+        self.conv1 = nn.Conv2d(icol, ocol, kernel_size=3, stride=1, padding=12, dilation=12, bias=True)
+        self.conv2 = nn.Conv2d(ocol, num_classes, kernel_size=3, stride=1, padding=12, dilation=12, bias=True)
+        self.conv3 = nn.Conv2d(num_classes, ocol, kernel_size=1, stride=1, padding=0, dilation=1, bias=True)
+        self.conv4 = nn.Conv2d(ocol, icol, kernel_size=1, stride=1, padding=0, dilation=1, bias=True)
+        self.relu = nn.ReLU(inplace=True)
 
+    def forward(self, x):
+        dow1 = self.conv1(x)
+        dow1 = self.relu(dow1)
+        seg = self.conv2(dow1)
+        inc1 = self.conv3(seg)
+        add1 = dow1 + self.relu(inc1)
+        inc2 = self.conv4(add1)
+        out = x + self.relu(inc2)
+        return out, seg
+
+class Residual_Refinement_Module(nn.Module):
+
+    def __init__(self, num_classes):
+        super(Residual_Refinement_Module, self).__init__()
+        self.RC1 = Residual_Covolution(2048, 512, num_classes)
+        self.RC2 = Residual_Covolution(2048, 512, num_classes)
+
+    def forward(self, x):
+        x, seg1 = self.RC1(x)
+        _, seg2 = self.RC2(x)
+        return [seg1+seg2]
+
+class ResNet_Refine(nn.Module):
+    def __init__(self, block, layers, num_classes):
+        self.inplanes = 64
+        super(ResNet_Refine, self).__init__()
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
+                               bias=False)
+        self.bn1 = nn.BatchNorm2d(64, affine = affine_par)
+        for i in self.bn1.parameters():
+            i.requires_grad = False
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1, ceil_mode=True) # change
+        self.layer1 = self._make_layer(block, 64, layers[0])
+        self.layer2 = self._make_layer(block, 128, layers[1], stride=2)
+        self.layer3 = self._make_layer(block, 256, layers[2], stride=1, dilation=2)
+        self.layer4 = self._make_layer(block, 512, layers[3], stride=1, dilation=4)
+        self.layer5 = Residual_Refinement_Module(num_classes)
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, 0.01)
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+        #        for i in m.parameters():
+        #            i.requires_grad = False
+
+    def _make_layer(self, block, planes, blocks, stride=1, dilation=1):
+        downsample = None
+        if stride != 1 or self.inplanes != planes * block.expansion or dilation == 2 or dilation == 4:
+            downsample = nn.Sequential(
+                nn.Conv2d(self.inplanes, planes * block.expansion,
+                          kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(planes * block.expansion,affine = affine_par))
+        for i in downsample._modules['1'].parameters():
+            i.requires_grad = False
+        layers = []
+        layers.append(block(self.inplanes, planes, stride,dilation=dilation, downsample=downsample))
+        self.inplanes = planes * block.expansion
+        for i in range(1, blocks):
+            layers.append(block(self.inplanes, planes, dilation=dilation))
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        x = self.layer5(x)
+
+        return x     
 
 class ResNet(nn.Module):
     def __init__(self, block, layers, num_classes):
@@ -203,7 +289,10 @@ def Res_Ms_Deeplab(num_classes=21):
     model = MS_Deeplab(Bottleneck, num_classes)
     return model
 
-def Res_Deeplab(num_classes=21):
-    model = ResNet(Bottleneck,[3, 4, 23, 3], num_classes)
+def Res_Deeplab(num_classes=21, is_refine=False):
+    if is_refine:
+        model = ResNet_Refine(Bottleneck,[3, 4, 23, 3], num_classes)
+    else:
+        model = ResNet(Bottleneck,[3, 4, 23, 3], num_classes)
     return model
 
