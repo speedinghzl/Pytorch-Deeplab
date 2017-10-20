@@ -4,8 +4,6 @@
 This is an (re-)implementation of [DeepLab-ResNet](http://liangchiehchen.com/projects/DeepLabv2_resnet.html) in Pytorch for semantic image segmentation on the [PASCAL VOC dataset](http://host.robots.ox.ac.uk/pascal/VOC/).
 
 ## Updates
-**16 October, 2017**:
-* Add refinement network and the single model with single scale testing leads to <code>76.32%</code> mIoU on val dataset without CRF as post-processing step.
 
 **9 July, 2017**:
 * The training script `train.py` has been re-written following the original optimisation setup: SGD with momentum, weight decay, learning rate with polynomial decay, different learning rates for different layers, ignoring the 'void' label (<code>255</code>).
