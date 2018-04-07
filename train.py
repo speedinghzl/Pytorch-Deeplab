@@ -93,14 +93,14 @@ def get_arguments():
 
 args = get_arguments()
 
-def loss_calc(pred, label, gpu):
+def loss_calc(pred, label):
     """
     This function returns cross entropy loss for semantic segmentation
     """
     # out shape batch_size x channels x h x w -> batch_size x channels x h x w
     # label shape h x w x 1 x batch_size  -> batch_size x 1 x h x w
-    label = Variable(label.long()).cuda(gpu)
-    criterion = torch.nn.CrossEntropyLoss(ignore_index=IGNORE_LABEL).cuda(gpu)
+    label = Variable(label.long()).cuda()
+    criterion = torch.nn.CrossEntropyLoss(ignore_index=IGNORE_LABEL).cuda()
     
     return criterion(pred, label)
 
@@ -157,11 +157,11 @@ def adjust_learning_rate(optimizer, i_iter):
 def main():
     """Create the model and start the training."""
     
+    os.environ["CUDA_VISIBLE_DEVICES"]=str(args.gpu)
     h, w = map(int, args.input_size.split(','))
     input_size = (h, w)
 
     cudnn.enabled = True
-    gpu = args.gpu
 
     # Create network.
     model = Res_Deeplab(num_classes=args.num_classes)
@@ -184,7 +184,7 @@ def main():
     #model.float()
     #model.eval() # use_global_stats = True
     model.train()
-    model.cuda(args.gpu)
+    model.cuda()
     
     cudnn.benchmark = True
 
@@ -206,12 +206,12 @@ def main():
 
     for i_iter, batch in enumerate(trainloader):
         images, labels, _, _ = batch
-        images = Variable(images).cuda(args.gpu)
+        images = Variable(images).cuda()
 
         optimizer.zero_grad()
         adjust_learning_rate(optimizer, i_iter)
         pred = interp(model(images))
-        loss = loss_calc(pred, labels, args.gpu)
+        loss = loss_calc(pred, labels)
         loss.backward()
         optimizer.step()
 
