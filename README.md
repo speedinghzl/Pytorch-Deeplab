@@ -47,6 +47,8 @@ The following command provides the description of each of the evaluation setting
 python evaluate.py --help
 ```
 
+## Acknowledgment
+This code is heavily borrowed from [pytorch-deeplab-resnet](https://github.com/isht7/pytorch-deeplab-resnet).
 
 ## Other implementations
 * [DeepLab-LargeFOV in TensorFlow](https://github.com/DrSleep/tensorflow-deeplab-lfov)
