@@ -201,7 +201,7 @@ def main():
                 lr=args.learning_rate, momentum=args.momentum,weight_decay=args.weight_decay)
     optimizer.zero_grad()
 
-    interp = nn.Upsample(size=input_size, mode='bilinear')
+    interp = nn.Upsample(size=input_size, mode='bilinear', align_corners=True)
 
 
     for i_iter, batch in enumerate(trainloader):
