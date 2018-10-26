@@ -117,7 +117,7 @@ def main():
     testloader = data.DataLoader(VOCDataSet(args.data_dir, args.data_list, crop_size=(505, 505), mean=IMG_MEAN, scale=False, mirror=False), 
                                     batch_size=1, shuffle=False, pin_memory=True)
 
-    interp = nn.Upsample(size=(505, 505), mode='bilinear')
+    interp = nn.Upsample(size=(505, 505), mode='bilinear', align_corners=True)
     data_list = []
 
     for index, batch in enumerate(testloader):
