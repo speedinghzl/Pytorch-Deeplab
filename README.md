@@ -31,7 +31,7 @@ For more details on the underlying model please refer to the following paper:
     
 ## Dataset and Training
 
-To train the network, one can use the augmented PASCAL VOC 2012 dataset with <code>10582</code> images for training and <code>1449</code> images for validation.
+To train the network, one can use the augmented PASCAL VOC 2012 dataset with <code>10582</code> images for training and <code>1449</code> images for validation. Pytorch >= 0.4.0.
 
 You can download converted `init.caffemodel` with extension name .pth [here](https://drive.google.com/open?id=0BxhUwxvLPO7TVFJQU1dwbXhHdEk). Besides that, one can also exploit random scaling and mirroring of the inputs during training as a means for data augmentation. For example, to train the model from scratch with random scale and mirroring turned on, simply run:
 ```bash
