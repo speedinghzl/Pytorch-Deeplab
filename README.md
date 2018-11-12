@@ -1,6 +1,6 @@
 # DeepLab-ResNet-Pytorch
 
-**New** We have released [Pytorch-Segmentation-Toolbox](https://github.com/speedinghzl/pytorch-segmentation-toolbox) which contains PyTorch Implementations for DeeplabV3 and PSPNet with **Better Reproduced Performance** on cityscapes.
+**New!** We have released [Pytorch-Segmentation-Toolbox](https://github.com/speedinghzl/pytorch-segmentation-toolbox) which contains PyTorch Implementations for DeeplabV3 and PSPNet with **Better Reproduced Performance** on cityscapes.
 
 This is an (re-)implementation of [DeepLab-ResNet](http://liangchiehchen.com/projects/DeepLabv2_resnet.html) in Pytorch for semantic image segmentation on the [PASCAL VOC dataset](http://host.robots.ox.ac.uk/pascal/VOC/).
 
